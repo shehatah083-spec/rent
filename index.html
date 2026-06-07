@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مجمع المدارس — إدارة عقود الإيجار (السحابية)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.9.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══ LOGIN PAGE ══ -->
+<div id="login-page" class="login-container">
+  <div class="login-box">
+    <div class="login-header">
+      <div class="login-logo">🏫</div>
+      <h1>مجمع المدارس</h1>
+      <p>إدارة عقود الإيجار - النسخة السحابية</p>
+    </div>
+    <form onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>البريد الإلكترونى</label>
+        <input type="email" id="login-email" placeholder="your@email.com" required>
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="login-password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">
+        <i class="ti ti-login"></i> دخول
+      </button>
+    </form>
+    <div class="login-toggle">
+      <p>ليس لديك حساب؟ <a href="#" onclick="toggleSignup(event)">إنشاء حساب جديد</a></p>
+    </div>
+    <div id="signup-form" style="display:none;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--g2)">
+      <h3 style="margin-bottom:1rem;font-size:14px">إنشاء حساب جديد</h3>
+      <form onsubmit="handleSignup(event)">
+        <div class="form-group">
+          <label>اسم الشركة</label>
+          <input type="text" id="signup-company" placeholder="مثال: مجمع المدارس" required>
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكترونى</label>
+          <input type="email" id="signup-email" placeholder="your@email.com" required>
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور (8 أحرف على الأقل)</label>
+          <input type="password" id="signup-password" placeholder="••••••••" minlength="8" required>
+        </div>
+        <div class="form-group">
+          <label>تأكيد كلمة المرور</label>
+          <input type="password" id="signup-confirm" placeholder="••••••••" minlength="8" required>
+        </div>
+        <button type="submit" class="btn btn-success" id="signup-btn">
+          <i class="ti ti-user-plus"></i> إنشاء حساب
+        </button>
+      </form>
+    </div>
+    <div id="login-error" style="display:none;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:1rem;margin-top:1rem;color:#991b1b;font-size:13px">
+      <i class="ti ti-alert-circle"></i> <span id="error-text"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app-page" style="display:none;flex:1;display:flex">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div class="sb-logo-icon"><i class="ti ti-building-school"></i></div>
+      <div>
+        <div class="sb-logo-title">مجمع المدارس</div>
+        <div class="sb-logo-sub">إدارة عقود الإيجار</div>
+      </div>
+    </div>
+  </div>
+  <div class="sb-scroll">
+    <span class="sb-lbl">القوائم الرئيسية</span>
+    <button class="sb-btn on" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>لوحة التحكم</button>
+    <button class="sb-btn" onclick="go('branches',this)"><i class="ti ti-building-community"></i>الفروع<span class="sb-num gray" id="br-count">0</span></button>
+    <button class="sb-btn" onclick="go('contracts',this)"><i class="ti ti-file-text"></i>العقود</button>
+    <button class="sb-btn" onclick="go('periods',this)"><i class="ti ti-calendar-stats"></i>الفترات والدفعات</button>
+    <span class="sb-lbl">تحليل</span>
+    <button class="sb-btn" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>التقارير</button>
+    <button class="sb-btn" onclick="go('alerts',this)"><i class="ti ti-bell"></i>التنبيهات<span class="sb-num red" id="al-badge" style="display:none">0</span></button>
+
+    <span class="sb-lbl">تصفية حسب الفرع</span>
+    <button class="br-item on" id="br-all-btn" onclick="setActiveBranch(null,this)">
+      <span class="br-all-dot"></span>كل الفروع<span class="sb-num gray" id="br-all-n">0</span>
+    </button>
+    <div id="sb-branches"></div>
+  </div>
+  <div class="sb-foot">
+    <div style="margin-bottom:8px" id="sb-date"></div>
+    <button class="btn bo bsm" style="width:100%;margin-bottom:4px" onclick="syncNow()"><i class="ti ti-cloud-download"></i> مزامنة</button>
+    <button class="btn bo bsm" style="width:100%" onclick="logout()"><i class="ti ti-logout"></i> خروج</button>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+  <header class="topbar">
+    <div class="tb-l">
+      <h2 id="pg-title">لوحة التحكم</h2>
+      <p id="pg-sub">نظرة عامة على جميع الفروع</p>
+    </div>
+    <div class="tb-r">
+      <span class="chip" id="br-chip" style="display:none"></span>
+      <span class="chip" id="date-chip"></span>
+      <span class="chip" id="sync-status" style="background:#dcfce7;color:#15803d;display:none"><i class="ti ti-cloud-check"></i> متزامن</span>
+      <button class="btn bp" onclick="openAdd()"><i class="ti ti-plus"></i> عقد جديد</button>
+      <span style="display:flex;align-items:center;gap:8px;color:var(--g4);font-size:12px;margin-right:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--ok)" id="online-indicator"></div>
+        <span id="user-email"></span>
+      </span>
+    </div>
+  </header>
+
+  <!-- BRANCH FILTER BAR -->
+  <div class="br-bar" id="br-bar"></div>
+
+  <div class="content">
+    <!-- ══ DASHBOARD ══ -->
+    <div id="page-dashboard" class="page active">
+      <div class="sg" id="db-sg"></div>
+      <div class="two">
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-building-community" style="color:var(--pr)"></i>أداء الفروع</span></div><div class="cb" id="db-br-chart"></div></div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-alert-triangle" style="color:var(--er)"></i>المستحقات والمتأخرات</span></div><div class="cb" id="db-dues"></div></div>
+      </div>
+      <div class="card"><div class="ch"><span class="ct"><i class="ti ti-refresh" style="color:var(--pr)"></i>تجديدات خلال 30 يوم</span></div><div class="cb" id="db-renew"></div></div>
+    </div>
+
+    <!-- ══ BRANCHES ══ -->
+    <div id="page-branches" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem">
+        <span style="font-size:13px;color:var(--g5)" id="br-page-sub"></span>
+        <button class="btn bp" onclick="openAddBranch()"><i class="ti ti-plus"></i> فرع جديد</button>
+      </div>
+      <div class="br-grid" id="br-cards"></div>
+    </div>
+
+    <!-- ══ CONTRACTS ══ -->
+    <div id="page-contracts" class="page">
+      <div class="tb">
+        <div class="sw-in"><i class="ti ti-search"></i><input type="text" id="c-q" placeholder="بحث..." oninput="renderContracts()"></div>
+        <select class="sel" id="c-st" onchange="renderContracts()"><option value="all">كل الحالات</option><option value="active">نشط</option><option value="terminated">منتهى</option></select>
+        <select class="sel" id="c-so" onchange="renderContracts()"><option value="start">البداية</option><option value="rent">الإيجار</option><option value="name">الاسم</option></select>
+        <span class="tag" id="c-cnt"></span>
+      </div>
+      <div class="tw"><table><thead><tr>
+        <th>#</th><th>المستأجر</th><th>الفرع</th><th>العقار</th><th>الإيجار</th><th>البداية</th><th>التجديد القادم</th><th>الحالة</th><th>صورة</th><th style="text-align:center">إجراءات</th>
+      </tr></thead><tbody id="c-tb"></tbody></table></div>
+    </div>
+
+    <!-- ══ PERIODS ══ -->
+    <div id="page-periods" class="page">
+      <div class="tb" style="justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:8px;flex:1">
+          <div class="sw-in"><i class="ti ti-search"></i><input type="text" id="p-q" placeholder="بحث..." oninput="renderPeriods()"></div>
+          <select class="sel" id="p-f" onchange="renderPeriods()"><option value="all">كل العقود</option><option value="dues">بها مستحقات</option><option value="arrears">بها متأخرات</option></select>
+        </div>
+        <button class="btn bp" onclick="printPeriods()"><i class="ti ti-printer"></i> طباعة</button>
+      </div>
+      <div class="sg sg3" id="pd-sg"></div>
+      <div id="pd-body"></div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div id="page-reports" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem">
+        <div id="r-branch-info" style="font-size:13px;font-weight:700;color:var(--pr)"></div>
+        <button class="btn bp" onclick="printReport()"><i class="ti ti-printer"></i> طباعة التقرير</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:1.2rem">
+        <div class="rpt" style="background:var(--pr-l);border-color:#bfdbfe"><div class="rpt-v" style="color:var(--pr)" id="r-cur">0 ر.س</div><div class="rpt-l" style="color:var(--pr)">📅 المستحق خلال الفترة الحالية</div><div class="rpt-s" id="r-cur-s"></div></div>
+        <div class="rpt" style="background:var(--er-l);border-color:#fecaca"><div class="rpt-v" style="color:var(--er)" id="r-arr">0 ر.س</div><div class="rpt-l" style="color:var(--er)">⚠️ المتأخرات عن الفترات السابقة</div><div class="rpt-s" id="r-arr-s"></div></div>
+      </div>
+      <div class="sg" id="r-sg"></div>
+      <div class="two">
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-chart-bar" style="color:var(--pr)"></i>الإيجار حسب الفرع</span></div><div class="cb" id="r-br"></div></div>
+        <div class="card"><div class="ch"><span class="ct"><i class="ti ti-list-check" style="color:var(--ok)"></i>تفاصيل المستحقات</span></div><div class="cb" id="r-detail"></div></div>
+      </div>
+    </div>
+
+    <!-- ══ ALERTS ══ -->
+    <div id="page-alerts" class="page"><div id="al-body"></div></div>
+  </div>
+</div>
+
+</div>
+
+<!-- ══ MODALS ══ -->
+<div id="m-c" class="ov" style="display:none"><div class="md md-lg">
+  <div class="mh"><h3 id="m-c-t">إضافة عقد جديد</h3><button class="btn bg2" onclick="closeM('m-c')"><i class="ti ti-x"></i></button></div>
+  <div class="mb">
+    <div class="fgr" style="gap:11px">
+      <div class="fg"><label>اسم المستأجر *</label><input id="f-ten" type="text" placeholder="الاسم الكامل"></div>
+      <div class="fg"><label>رقم الهاتف</label><input id="f-phn" type="text" placeholder="05xxxxxxxx"></div>
+      <div class="fg fc"><label>العقار / الوصف *</label><input id="f-prp" type="text" placeholder="شقة 3 غرف - الحى"></div>
+      <div class="fg"><label>الفرع *</label><select id="f-br"></select></div>
+      <div class="fg"><label>الإيجار <span id="freq-label">نصف السنوى</span> (ر.س) *</label><input id="f-rnt" type="number" min="0" placeholder="0" oninput="calcAnn()"></div>
+      <div class="fg"><label>الإيجار السنوى (تلقائى)</label><input id="f-ann" type="number" readonly placeholder="0"></div>
+      <div class="fg"><label>مبلغ التأمين (ر.س)</label><input id="f-dep" type="number" min="0" placeholder="0"></div>
+      <div class="fg"><label>تاريخ البداية *</label><input id="f-st" type="date"></div>
+      <div class="fg"><label>نوع العقد</label><select id="f-ar" onchange="toggleEnd()"><option value="1">تجديد تلقائى سنوى</option><option value="0">محدد المدة</option></select></div>
+      <div class="fg" id="f-end-g" style="display:none"><label>تاريخ الانتهاء</label><input id="f-end" type="date"></div>
+      <div class="fg"><label>دورة الدفع</label><select id="f-pf" onchange="updateFreqLabel()">
+        <option value="1">شهرى (كل شهر)</option>
+        <option value="2">شهرين (كل شهرين)</option>
+        <option value="3">ربع سنوى (كل 3 أشهر)</option>
+        <option value="4">كل 4 أشهر</option>
+        <option value="6" selected>نصف سنوى (كل 6 أشهر)</option>
+        <option value="12">سنوى (كل 12 شهر)</option>
+      </select></div>
+      <div class="fg fc"><label>ملاحظات</label><textarea id="f-nts" placeholder="ملاحظات..."></textarea></div>
+    </div>
+    <div style="margin:14px 0 10px;padding:10px 0 0;border-top:1px dashed var(--g2)">
+      <div style="font-size:11px;font-weight:700;color:var(--g4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;display:flex;align-items:center;gap:6px"><i class="ti ti-shield-lock" style="font-size:14px"></i> البيانات القانونية والتوثيق</div>
+      <div class="fgr" style="gap:11px">
+        <div class="fg"><label>رقم الحساب</label><input id="f-acc" type="text" placeholder="رقم الحساب البنكى"></div>
+        <div class="fg"><label>رقم الهوية</label><input id="f-nid" type="text" placeholder="رقم هوية المستأجر"></div>
+        <div class="fg"><label>رقم القطعة</label><input id="f-plt" type="text" placeholder="رقم قطعة الأرض"></div>
+        <div class="fg"><label>رقم المخطط</label><input id="f-pln" type="text" placeholder="رقم المخطط"></div>
+        <div class="fg"><label>رقم الصك</label><input id="f-dno" type="text" placeholder="رقم صك الملكية"></div>
+        <div class="fg"><label>تاريخ الصك</label><input id="f-ddt" type="date"></div>
+      </div>
+    </div>
+    <div class="fg fc" style="margin-top:4px">
+      <label>صورة العقد</label>
+      <div class="img-drop" id="img-drop" onclick="document.getElementById('img-inp').click()" ondragover="ev.preventDefault&&ev.preventDefault()" ondrop="handleDrop(event)">
+        <i class="ti ti-photo-up" style="font-size:26px;display:block;margin-bottom:5px"></i>
+        اضغط لاختيار صورة أو اسحبها هنا
+        <div style="font-size:11px;margin-top:3px;color:var(--g4)">JPG / PNG — حجم أقصى 5MB</div>
+      </div>
+      <input type="file" id="img-inp" accept="image/*" style="display:none" onchange="handleImgSel(this)">
+      <button id="img-rm" class="btn bo bsm" style="display:none;margin-top:5px;align-self:flex-start" onclick="removeImg()"><i class="ti ti-trash"></i> حذف الصورة</button>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bo" onclick="closeM('m-c')">إلغاء</button><button class="btn bp" id="save-contract-btn" onclick="saveC()"><i class="ti ti-device-floppy"></i> حفظ</button></div>
+</div></div>
+
+<!-- ══ BRANCH MODAL ══ -->
+<div id="m-br" class="ov" style="display:none"><div class="md md-sm">
+  <div class="mh"><h3 id="m-br-t">إضافة فرع جديد</h3><button class="btn bg2" onclick="closeM('m-br')"><i class="ti ti-x"></i></button></div>
+  <div class="mb">
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div class="fg"><label>اسم الفرع *</label><input id="b-nm" type="text" placeholder="مثال: الفرع الرئيسى"></div>
+      <div class="fg"><label>الموقع</label><input id="b-loc" type="text" placeholder="مثال: حى النزهة - الرياض"></div>
+      <div class="fg"><label>مدير الفرع</label><input id="b-mgr" type="text" placeholder="اسم المدير"></div>
+      <div class="fg"><label>لون الفرع</label>
+        <div class="color-row" id="color-row"></div>
+        <input type="hidden" id="b-clr" value="#1e40af">
+      </div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bo" onclick="closeM('m-br')">إلغاء</button><button class="btn bp" id="save-branch-btn" onclick="saveBranch()"><i class="ti ti-device-floppy"></i> حفظ</button></div>
+</div></div>
+
+<!-- ══ DETAIL MODAL ══ -->
+<div id="m-d" class="ov" style="display:none"><div class="md md-lg" style="display:flex;flex-direction:column;max-height:90vh">
+  <div class="mh" style="flex-shrink:0"><h3>تفاصيل العقد</h3><button class="btn bg2" onclick="closeM('m-d')"><i class="ti ti-x"></i></button></div>
+  <div class="mb" id="m-d-body" style="flex:1;overflow-y:auto"></div>
+  <div class="mf" style="flex-shrink:0;border-top:2px solid var(--g2);background:#fff">
+    <button class="btn bo" onclick="closeM('m-d')">إغلاق</button>
+    <button class="btn bs" id="d-rc"><i class="ti ti-trending-up"></i> تغيير الإيجار</button>
+    <button class="btn bw" id="d-ren"><i class="ti ti-refresh"></i> تجديد</button>
+    <button class="btn bp" id="d-edt"><i class="ti ti-edit"></i> تعديل</button>
+  </div>
+</div></div>
+
+<!-- ══ PAYMENT MODAL ══ -->
+<div id="m-p" class="ov" style="display:none"><div class="md md-sm">
+  <div class="mh"><h3>تسجيل دفعة</h3><button class="btn bg2" onclick="closeM('m-p')"><i class="ti ti-x"></i></button></div>
+  <div class="mb">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="fg"><label>العقد *</label><select id="p-cid" onchange="pFill()"></select></div>
+      <div class="fgr">
+        <div class="fg"><label>رقم الفترة *</label><input id="p-per" type="number" min="1" placeholder="1" oninput="pFill()"></div>
+        <div class="fg"><label>المستحق</label><input id="p-due" readonly></div>
+        <div class="fg"><label>المبلغ المدفوع *</label><input id="p-amt" type="number" min="0" placeholder="0"></div>
+        <div class="fg"><label>تاريخ الدفع</label><input id="p-dt" type="date"></div>
+        <div class="fg"><label>طريقة الدفع</label><select id="p-mth"><option>تحويل بنكى</option><option>نقدى</option><option>شيك</option><option>تطبيق دفع</option></select></div>
+        <div class="fg"><label>الحالة</label><select id="p-sts"><option value="paid">مدفوع بالكامل</option><option value="partial">جزئى</option><option value="late">متأخر</option></select></div>
+        <div class="fg fc"><label>ملاحظة</label><input id="p-nt" type="text" placeholder="اختيارى"></div>
+      </div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bo" onclick="closeM('m-p')">إلغاء</button><button class="btn bs" id="save-payment-btn" onclick="savePay()"><i class="ti ti-device-floppy"></i> حفظ</button></div>
+</div></div>
+
+<!-- ══ RENT CHANGE MODAL ══ -->
+<div id="m-rc" class="ov" style="display:none"><div class="md md-sm">
+  <div class="mh"><h3>تسجيل تغيير الإيجار</h3><button class="btn bg2" onclick="closeM('m-rc')"><i class="ti ti-x"></i></button></div>
+  <div class="mb">
+    <div style="background:var(--wa-l);border:1px solid #fde68a;border-radius:8px;padding:.8rem;margin-bottom:14px;font-size:13px;color:var(--wa);display:flex;gap:8px">
+      <i class="ti ti-info-circle" style="font-size:17px;flex-shrink:0;margin-top:1px"></i>
+      <div>كل فترة هتتحسب بالإيجار السارى <strong>وقت بداية الفترة</strong>. الفترات القديمة هتفضل بسعرها القديم تلقائياً.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:11px">
+      <div class="fg"><label>العقد</label><input id="rc-name" readonly style="background:var(--g0);color:var(--g5)"></div>
+      <div class="fgr">
+        <div class="fg"><label>الإيجار الحالى</label><input id="rc-old" readonly style="background:var(--g0);color:var(--er);font-weight:700"></div>
+        <div class="fg"><label>الإيجار الجديد (ر.س) *</label><input id="rc-new" type="number" min="0" placeholder="0" oninput="rcCalcDiff()"></div>
+      </div>
+      <div class="fg" id="rc-diff-row" style="display:none">
+        <div style="background:var(--ok-l);border:1px solid #86efac;border-radius:7px;padding:.65rem .9rem;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--g6);font-weight:600">الفرق</span>
+          <span id="rc-diff" style="font-weight:800;color:var(--ok)"></span>
+        </div>
+      </div>
+      <div class="fg"><label>تاريخ التطبيق (بداية الفترة الجديدة) *</label><input id="rc-date" type="date"></div>
+      <div class="fg"><label>سبب التغيير</label><input id="rc-reason" type="text" placeholder="مثال: تجديد سنوى — زيادة 10%"></div>
+    </div>
+  </div>
+  <div class="mf"><button class="btn bo" onclick="closeM('m-rc')">إلغاء</button><button class="btn bs" id="save-rent-change-btn" onclick="saveRentChange()"><i class="ti ti-check"></i> تأكيد التغيير</button></div>
+</div></div>
+
+<!-- ══ IMAGE VIEWER ══ -->
+<div id="img-vw" class="img-viewer" style="display:none" onclick="this.style.display='none'">
+  <img id="img-vw-src" src="">
+</div>
+
+<!-- ══ LOADING MODAL ══ -->
+<div id="loading-modal" class="ov" style="display:none;background:rgba(15,23,42,.8)">
+  <div style="text-align:center;color:#fff">
+    <div style="font-size:40px;margin-bottom:10px"><i class="ti ti-loader"></i></div>
+    <p id="loading-text">جاري التحميل...</p>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
